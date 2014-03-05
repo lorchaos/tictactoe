@@ -1,7 +1,9 @@
 package server
 
 import ("fmt"
-		"strings")
+		"strings"
+		"strconv"
+		"log")
 
 const(
 	OK string = "OK"
@@ -24,9 +26,9 @@ const(
     LOSE = "LOSE"
 )
 
+type board [9] *Peer
 
 type gameFn func(m *Match) gameFn
-
 
 func FUP(key string, param ... string) *Command {
 
@@ -57,7 +59,7 @@ func start(m *Match) gameFn {
 	waiting.Perform(FUP(OK, WAIT, "123"))
 	playing.Perform(FUP(OK, GO, "123"))
 
-	return move(playing, waiting)
+	return move(playing, waiting, new(board))
 }
 
 func endGame(winner, loser *Peer) gameFn {
@@ -70,12 +72,29 @@ func endGame(winner, loser *Peer) gameFn {
 	}
 }
 
-func process() (bool, bool) {
-	return false, true
+func process(b *board, move int, p *Peer) bool {
+
+	if move > 0 && move < len(b) && b[move] == nil {
+		b[move] = p
+		return true
+	} 
+
+	return false
+}
+
+func done(b *board) bool {
+
+	for i := 0; i < len(b); i++ {
+
+		fmt.Printf("%d : %v\n", i, b[i])
+	}
+
+	//TODO calculate here if the board is done
+	return false
 }
 
 
-func move(playing, waiting *Peer) gameFn {
+func move(playing, waiting *Peer, b *board) gameFn {
 	
 	return func(m *Match) gameFn {
 
@@ -85,26 +104,27 @@ func move(playing, waiting *Peer) gameFn {
 
     	if p == playing {
 
-	    	done, valid := process()
+    		if m, err := strconv.Atoi(c.params[0]); err == nil {
 
-    		if valid {
+    			if process(b, m, p) {
  
- 	   			playing.Perform(FUP(OK))
-    			waiting.Perform(FUP(OP_MOVE, "0"))
+ 	   				playing.Perform(FUP(OK))
+    				waiting.Perform(FUP(OP_MOVE, strconv.Itoa(m)))
 
-    			if done {
-    				return endGame(playing, waiting); 
-    			}
-    			return move(waiting, playing)
+    				if done(b) {
+    					return endGame(playing, waiting); 
+    				} 
+    				return move(waiting, playing, b)
     		
-    		} else {
-    			p.Perform(FUP(ERR_INVALID_MOVE))
+    			} else {
+    				p.Perform(FUP(ERR_INVALID_MOVE))
+    			}
     		}
 
 		} else {
 			p.Perform(FUP(ERR_NOT_YOUR_TURN))
 		}
 
-		return move(playing, waiting)
+		return move(playing, waiting, b)
 	}
 }

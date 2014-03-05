@@ -1,7 +1,6 @@
 package server
 
-import ("log"
-		"time")
+import ("time")
 
 type Match struct {
 
@@ -37,7 +36,7 @@ func (m *matchMaker) loop(g GameRunner) {
 				}
 
 				case <- time.After(5 * time.Second):
-					match.Broadcast(&Command{"Waiting for peer"})
+					match.Broadcast(FUP("Waiting for peer"))
 
 		}
 	}
@@ -123,19 +122,4 @@ func (m *Match) Close() {
 
 		p.quit()
 	}
-}
-
-func (m *Match) Handle() {
-
-	log.Println("Starting match")
-	/*
-
-	m.peers[0].Perform(Command{"START"})
-	m.peers[1].Perform(Command{"WAIT"})
-
-	m.peers[0].Perform(Command{"WON"})
-	m.peers[1].Perform(Command{"LOST"})
-	*/
-
-	log.Println("Match ended")
 }

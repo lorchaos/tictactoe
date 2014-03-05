@@ -4,6 +4,7 @@ import ("net"
 		"fmt"
 		"log"
 		"bufio"
+		"strings"
 )
 
 type Server struct {
@@ -11,7 +12,9 @@ type Server struct {
 }
 
 type Command struct {
-	payload string 	
+	id string
+	params []string
+	payload string 
 }
 
 func NewServer() *Server {
@@ -124,8 +127,11 @@ func (p Peer) handleRead() {
 
 		log.Printf("Handled %s %d\n", t, len(t))
 
+		tokens := strings.Split(t, " ")
+
 		c = new(Command)
-		c.payload = t
+		c.id = tokens[0]
+		c.params = tokens[1:]
 		p.out <- *c
 	}
 
