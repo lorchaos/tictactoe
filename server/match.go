@@ -79,6 +79,21 @@ func (m *Match) AddPeer(p *Peer) bool {
 	return true
 }
 
+func(m *Match) Expect(c string, p int) (*Peer, Command) { 
+
+	//TODO fix this
+	select {
+
+	case c := <-m.peers[0].out:
+		return m.peers[0], c
+
+	case c := <-m.peers[1].out:
+		return m.peers[1], c
+
+	};
+}
+
+
 func(m *Match) NextCommand() (*Peer, Command) { 
 
 	//TODO fix this

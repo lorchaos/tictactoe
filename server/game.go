@@ -51,47 +51,60 @@ func Checker(m *Match) {
 
 func start(m *Match) gameFn {
 
-	m.peers[1].Perform(FUP(OK, WAIT, "123"))
-	m.peers[0].Perform(FUP(OK, GO, "123"))
+	waiting := m.peers[1]
+	playing := m.peers[0]
 
-	return move(0)
+	waiting.Perform(FUP(OK, WAIT, "123"))
+	playing.Perform(FUP(OK, GO, "123"))
+
+	return move(playing, waiting)
 }
 
-func endGame(winnerIndex, loserIndex int) gameFn {
+func endGame(winner, loser *Peer) gameFn {
 
 	return func(m *Match) gameFn {
 
-		m.peers[loserIndex].Perform(FUP(END, LOSE))
-		m.peers[winnerIndex].Perform(FUP(END, WIN))
+		loser.Perform(FUP(END, LOSE))
+		winner.Perform(FUP(END, WIN))
 		return nil
 	}
 }
 
-func move(playerIndex int) gameFn {
+func process() (bool, bool) {
+	return false, true
+}
+
+
+func move(playing, waiting *Peer) gameFn {
 	
 	return func(m *Match) gameFn {
-    	
-    	//c, err := m.Expect(MOVE, playerIndex)
 
-    	p, _ := m.NextCommand()
+    	p, c := m.NextCommand()
 
-		if p == m.peers[playerIndex % 2] {
+    	fmt.Printf("Got %v\n", c)
 
-			if c.isCommand(MOVE) {
+    	if p == playing {
 
+	    	done, valid := process()
 
-			}
+    		if valid {
+ 
+ 	   			playing.Perform(FUP(OK))
+    			waiting.Perform(FUP(OP_MOVE, "0"))
 
-			p.Perform(FUP("OK"))
-			
-			if playerIndex == 2 {
-				return endGame(playerIndex % 2, (playerIndex + 1) % 2) 
-			}
+    			if done {
+    				return endGame(playing, waiting); 
+    			}
+    			return move(waiting, playing)
+    		
+    		} else {
+    			p.Perform(FUP(ERR_INVALID_MOVE))
+    		}
 
-			return move(playerIndex + 1)
+		} else {
+			p.Perform(FUP(ERR_NOT_YOUR_TURN))
 		}
 
-		p.Perform(FUP(ERR_NOT_YOUR_TURN))
-		return move(playerIndex) 
+		return move(playing, waiting)
 	}
 }
