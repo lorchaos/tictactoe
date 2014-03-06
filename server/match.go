@@ -36,7 +36,7 @@ func (m *matchMaker) loop(g GameRunner) {
 				}
 
 				case <- time.After(5 * time.Second):
-					match.Broadcast(FUP("Waiting for peer"))
+					match.Broadcast(COMMAND("Waiting for peer"))
 
 		}
 	}

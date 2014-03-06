@@ -104,17 +104,13 @@ func (p Peer) handleWrite() {
 
 	w := bufio.NewWriter(p.conn)
 
-	for {
+	for c := range p.in {
 
-		select {
-			case c := <- p.in:
-
-				if c.id == BYE {
-					p.quit()
-				} else {
-					fmt.Fprintf(w, c.payload)
-					w.Flush()
-				}
+		if c.id == BYE {
+			p.quit()
+		} else {
+			fmt.Fprintf(w, c.payload)
+			w.Flush()
 		}
 	}
 }

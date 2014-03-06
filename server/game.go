@@ -31,7 +31,7 @@ type board [9] *Peer
 
 type gameFn func(m *Match) gameFn
 
-func FUP(key string, param ... string) *Command {
+func COMMAND(key string, param ... string) *Command {
 
 	p := strings.Join(param, " ")
 
@@ -49,7 +49,7 @@ func Checker(m *Match) {
 		f = f(m)
 	}
 
-	m.Broadcast(FUP(BYE))
+	m.Broadcast(COMMAND(BYE))
 }
 
 
@@ -58,8 +58,8 @@ func start(m *Match) gameFn {
 	waiting := m.peers[1]
 	playing := m.peers[0]
 
-	waiting.Perform(FUP(OK, WAIT, "123"))
-	playing.Perform(FUP(OK, GO, "123"))
+	waiting.Perform(COMMAND(OK, WAIT, "123"))
+	playing.Perform(COMMAND(OK, GO, "123"))
 
 	return move(playing, waiting, new(board))
 }
@@ -68,8 +68,8 @@ func endGame(winner, loser *Peer) gameFn {
 
 	return func(m *Match) gameFn {
 
-		loser.Perform(FUP(END, LOSE))
-		winner.Perform(FUP(END, WIN))
+		loser.Perform(COMMAND(END, LOSE))
+		winner.Perform(COMMAND(END, WIN))
 		return nil
 	}
 }
@@ -121,12 +121,16 @@ func move(playing, waiting *Peer, b *board) gameFn {
 
     	if p == playing {
 
-    		if m, err := strconv.Atoi(c.params[0]); err == nil {
+    		if len(c.params) <= 0 {
+
+    			p.Perform(COMMAND(ERR_INVALID_COMMAND))
+
+    		} else if m, err := strconv.Atoi(c.params[0]); err == nil {
 
     			if process(b, m, p) {
  
- 	   				playing.Perform(FUP(OK))
-    				waiting.Perform(FUP(OP_MOVE, strconv.Itoa(m)))
+ 	   				playing.Perform(COMMAND(OK))
+    				waiting.Perform(COMMAND(OP_MOVE, strconv.Itoa(m)))
 
     				if done(b) {
     					return endGame(playing, waiting); 
@@ -134,12 +138,12 @@ func move(playing, waiting *Peer, b *board) gameFn {
     				return move(waiting, playing, b)
     		
     			} else {
-    				p.Perform(FUP(ERR_INVALID_MOVE))
+    				p.Perform(COMMAND(ERR_INVALID_MOVE))
     			}
     		}
 
 		} else {
-			p.Perform(FUP(ERR_NOT_YOUR_TURN))
+			p.Perform(COMMAND(ERR_NOT_YOUR_TURN))
 		}
 
 		return move(playing, waiting, b)

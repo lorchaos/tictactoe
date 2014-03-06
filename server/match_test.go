@@ -21,7 +21,7 @@ func TestCompletion(t *testing.T) {
 
 func TestCommand(t *testing.T) {
 
-	t.Error(FUP("OK", "GO", "1234"));
+	t.Error(COMMAND("OK", "GO", "1234"));
 }
 
 func TestArray(t *testing.T) {
