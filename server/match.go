@@ -115,11 +115,3 @@ func (m *Match) Broadcast(c *Command) {
 		p.Perform(c)
 	}
 }
-
-func (m *Match) Close() {
-	//TODO implement
-	for _, p := range m.peers {
-
-		p.quit()
-	}
-}

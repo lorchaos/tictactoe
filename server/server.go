@@ -108,8 +108,13 @@ func (p Peer) handleWrite() {
 
 		select {
 			case c := <- p.in:
-				fmt.Fprintf(w, c.payload)
-				w.Flush()
+
+				if c.id == BYE {
+					p.quit()
+				} else {
+					fmt.Fprintf(w, c.payload)
+					w.Flush()
+				}
 		}
 	}
 }
