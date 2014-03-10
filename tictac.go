@@ -1,10 +1,14 @@
 package main
 
-import ("github.com/lorchaos/checker/server")
+import (
+	"github.com/lorchaos/tictactoe/server"
+)
 
 func main() {
-	
-	server := server.NewServer()
 
+	server := server.NewServer()
 	server.Start()
+	
+	
+
 }

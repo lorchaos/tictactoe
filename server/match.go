@@ -1,9 +1,10 @@
 package server
 
-import ("time")
+import (
+	"time"
+)
 
 type Match struct {
-
 	peers []*Peer
 }
 
@@ -17,7 +18,6 @@ func (m *matchMaker) AddPlayer(p *Peer) {
 	m.players <- p
 }
 
-
 func (m *matchMaker) loop(g GameRunner) {
 
 	match := NewMatch()
@@ -25,18 +25,18 @@ func (m *matchMaker) loop(g GameRunner) {
 	for {
 
 		select {
-			case p := <- m.players:
-				match.AddPeer(p)
+		case p := <-m.players:
+			match.AddPeer(p)
 
-				if match.IsComplete() {
+			if match.IsComplete() {
 
-					go g(match)
-					
-					match = NewMatch()
-				}
+				go g(match)
 
-				case <- time.After(5 * time.Second):
-					match.Broadcast(COMMAND("Waiting for peer"))
+				match = NewMatch()
+			}
+
+		case <-time.After(5 * time.Second):
+			match.Broadcast(NewCommand("Waiting for peer"))
 
 		}
 	}
@@ -52,7 +52,6 @@ func RunMatchMaker(g GameRunner) *matchMaker {
 	return m
 }
 
-
 func NewMatch() *Match {
 
 	m := new(Match)
@@ -66,7 +65,6 @@ func (m Match) IsComplete() bool {
 	return len(m.peers) == 2
 }
 
-
 func (m *Match) AddPeer(p *Peer) bool {
 
 	if m.IsComplete() {
@@ -78,7 +76,7 @@ func (m *Match) AddPeer(p *Peer) bool {
 	return true
 }
 
-func(m *Match) Expect(c string, p int) (*Peer, Command) { 
+func (m *Match) Expect(c string, p int) (*Peer, Command) {
 
 	//TODO fix this
 	select {
@@ -89,11 +87,10 @@ func(m *Match) Expect(c string, p int) (*Peer, Command) {
 	case c := <-m.peers[1].out:
 		return m.peers[1], c
 
-	};
+	}
 }
 
-
-func(m *Match) NextCommand() (*Peer, Command) { 
+func (m *Match) NextCommand(c string) (*Peer, Command) {
 
 	//TODO fix this
 	select {
@@ -104,9 +101,8 @@ func(m *Match) NextCommand() (*Peer, Command) {
 	case c := <-m.peers[1].out:
 		return m.peers[1], c
 
-	};
+	}
 }
-
 
 func (m *Match) Broadcast(c *Command) {
 

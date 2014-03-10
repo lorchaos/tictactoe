@@ -1,20 +1,38 @@
 package server
 
-import ("net"
-		"fmt"
-		"log"
-		"bufio"
-		"strings"
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"net"
+	"strings"
 )
 
 type Server struct {
 	listener net.Listener
 }
 
+type Sendable interface {
+	Payload() string
+}
+
 type Command struct {
-	id string
-	params []string
-	payload string 
+	Sendable
+	id      string
+	params  []string
+}
+
+func NewCommand(id string, param ...string) *Command {
+	
+	c := new(Command)
+	c.id = id
+	c.params = param
+	return c
+}
+
+func (c *Command) Payload() string  {
+	p := strings.Join(c.params, " ")
+	return fmt.Sprintf("%s %s\n", c.id, p)
 }
 
 func NewServer() *Server {
@@ -38,17 +56,17 @@ func (server *Server) Start() {
 	m := RunMatchMaker(Checker)
 
 	for {
-		
+
 		conn, err := ln.Accept()
 
 		if err != nil {
-		
+
 			log.Printf("Unable to accept new connections: %v", err)
 			return
 
 		} else {
 
-			m.AddPlayer(NewPeer(conn));
+			m.AddPlayer(NewPeer(conn))
 		}
 	}
 }
@@ -74,14 +92,13 @@ func (p Peer) quit() {
 
 	p.conn.Close()
 
-	close(p.out) 
+	close(p.out)
 	close(p.in)
 
 	log.Printf("Done.")
 }
 
-
-func NewPeer(conn net.Conn) (*Peer) {
+func NewPeer(conn net.Conn) *Peer {
 
 	//defer conn.Close()
 
@@ -109,7 +126,8 @@ func (p Peer) handleWrite() {
 		if c.id == BYE {
 			p.quit()
 		} else {
-			fmt.Fprintf(w, c.payload)
+			pl := c.Payload()
+			fmt.Fprintf(w, pl)
 			w.Flush()
 		}
 	}
