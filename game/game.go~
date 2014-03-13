@@ -1,10 +1,10 @@
-package server
+package game
 
 import (
 	"fmt"
 	//"log"
 	"strconv"
-	
+	"github.com/lorchaos/tictactoe/peer"
 )
 
 const (
@@ -43,8 +43,10 @@ func start(m *Match) gameFn {
 	waiting := m.peers[1]
 	playing := m.peers[0]
 
-	waiting.Perform(NewCommand(OK, WAIT, "123"))
-	playing.Perform(NewCommand(OK, GO, "123"))
+	id := strconv.Itoa(m.Id)
+
+	waiting.Perform(NewCommand(OK, WAIT, id))
+	playing.Perform(NewCommand(OK, GO, id))
 
 	return move(playing, waiting, new(board))
 }

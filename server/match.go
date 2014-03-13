@@ -2,112 +2,46 @@ package server
 
 import (
 	"time"
+	"github.com/lorchaos/tictactoe/peer"
 )
 
-type Match struct {
-	peers []*Peer
-}
+func MatchBuilder(c chan *peer.Peer) chan *peer.Match {
 
-type GameRunner func(m *Match)
+	output := make(chan *peer.Match)
+	
+	go func() {
 
-type matchMaker struct {
-	players chan *Peer
-}
+		id := 0
+		match := newMatch(id)
 
-func (m *matchMaker) AddPlayer(p *Peer) {
-	m.players <- p
-}
+		for {
 
-func (m *matchMaker) loop(g GameRunner) {
+			select {
+			case p := <- c:
+				match.AddPeer(p)
 
-	match := NewMatch()
+				if match.IsComplete() {
+					output <- match
+					id = id + 1
+					match = newMatch(id)
+				}
 
-	for {
+			case <-time.After(5 * time.Second):
+				match.Broadcast(peer.NewCommand("Waiting for peer"))
 
-		select {
-		case p := <-m.players:
-			match.AddPeer(p)
-
-			if match.IsComplete() {
-
-				go g(match)
-
-				match = NewMatch()
 			}
-
-		case <-time.After(5 * time.Second):
-			match.Broadcast(NewCommand("Waiting for peer"))
-
 		}
-	}
+	}()
+
+	return output
 }
 
-func RunMatchMaker(g GameRunner) *matchMaker {
+func newMatch(id int) *peer.Match {
 
-	m := new(matchMaker)
-	m.players = make(chan *Peer)
-
-	go m.loop(g)
-
+	m := new(peer.Match)
+	m.Peers = make([]*peer.Peer, 0, 2)
+	m.Id = id
 	return m
 }
 
-func NewMatch() *Match {
 
-	m := new(Match)
-	m.peers = make([]*Peer, 0, 2)
-	return m
-}
-
-// do we have all peers?
-func (m Match) IsComplete() bool {
-
-	return len(m.peers) == 2
-}
-
-func (m *Match) AddPeer(p *Peer) bool {
-
-	if m.IsComplete() {
-		return false
-	}
-
-	m.peers = append(m.peers, p)
-
-	return true
-}
-
-func (m *Match) Expect(c string, p int) (*Peer, Command) {
-
-	//TODO fix this
-	select {
-
-	case c := <-m.peers[0].out:
-		return m.peers[0], c
-
-	case c := <-m.peers[1].out:
-		return m.peers[1], c
-
-	}
-}
-
-func (m *Match) NextCommand(c string) (*Peer, Command) {
-
-	//TODO fix this
-	select {
-
-	case c := <-m.peers[0].out:
-		return m.peers[0], c
-
-	case c := <-m.peers[1].out:
-		return m.peers[1], c
-
-	}
-}
-
-func (m *Match) Broadcast(c *Command) {
-
-	for _, p := range m.peers {
-
-		p.Perform(c)
-	}
-}

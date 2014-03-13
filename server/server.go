@@ -1,39 +1,15 @@
 package server
 
 import (
-	"bufio"
-	"fmt"
 	"log"
 	"net"
-	"strings"
+	"github.com/lorchaos/tictactoe/peer"
 )
 
 type Server struct {
 	listener net.Listener
 }
 
-type Sendable interface {
-	Payload() string
-}
-
-type Command struct {
-	Sendable
-	id      string
-	params  []string
-}
-
-func NewCommand(id string, param ...string) *Command {
-	
-	c := new(Command)
-	c.id = id
-	c.params = param
-	return c
-}
-
-func (c *Command) Payload() string  {
-	p := strings.Join(c.params, " ")
-	return fmt.Sprintf("%s %s\n", c.id, p)
-}
 
 func NewServer() *Server {
 	return new(Server)
@@ -44,7 +20,7 @@ func (server *Server) Stop() {
 	server.listener.Close()
 }
 
-func (server *Server) Start() {
+func (server *Server) Start() chan *peer.Peer {
 
 	ln, err := net.Listen("tcp", ":2020")
 	if err != nil {
@@ -53,116 +29,27 @@ func (server *Server) Start() {
 
 	server.listener = ln
 
-	m := RunMatchMaker(Checker)
+	c := make(chan *peer.Peer)
+	
+	go func() {
 
-	for {
+		for {
 
-		conn, err := ln.Accept()
+			conn, err := ln.Accept()
 
-		if err != nil {
+			if err != nil {
 
-			log.Printf("Unable to accept new connections: %v", err)
-			return
+				log.Printf("Unable to accept new connections: %v", err)
+				close(c)
+				return
 
-		} else {
+			} else {
 
-			m.AddPlayer(NewPeer(conn))
+				c <- peer.NewPeer(conn)
+			}
 		}
-	}
+	}()
+
+	return c
 }
 
-type Peer struct {
-
-	// the network connection
-	conn net.Conn
-
-	// this is how the peer sends messages to the server
-	out chan Command
-
-	// this is how the server communicates with the Peer
-	in chan Command
-}
-
-func (p Peer) Perform(c *Command) {
-
-	p.in <- *c
-}
-
-func (p Peer) quit() {
-
-	p.conn.Close()
-
-	close(p.out)
-	close(p.in)
-
-	log.Printf("Done.")
-}
-
-func NewPeer(conn net.Conn) *Peer {
-
-	//defer conn.Close()
-
-	//TODO create a host abstraction here
-
-	p := new(Peer)
-	p.conn = conn
-	p.out = make(chan Command)
-	p.in = make(chan Command)
-
-	go p.handleWrite()
-	go p.handleRead()
-
-	log.Printf("Connected! %v\n", conn)
-
-	return p
-}
-
-func (p Peer) handleWrite() {
-
-	w := bufio.NewWriter(p.conn)
-
-	for c := range p.in {
-
-		if c.id == BYE {
-			p.quit()
-		} else {
-			pl := c.Payload()
-			fmt.Fprintf(w, pl)
-			w.Flush()
-		}
-	}
-}
-
-func (p Peer) handleRead() {
-
-	r := bufio.NewReader(p.conn)
-	scanner := bufio.NewScanner(r)
-
-	var c *Command
-
-	for scanner.Scan() {
-
-		t := scanner.Text()
-
-		log.Printf("Handled %s %d\n", t, len(t))
-
-		tokens := strings.Split(t, " ")
-
-		c = new(Command)
-		c.id = tokens[0]
-		c.params = tokens[1:]
-		p.out <- *c
-	}
-
-	if err := scanner.Err(); err != nil {
-
-		log.Println("reading standard input:", err)
-
-	} else {
-		log.Println("no errors")
-	}
-
-	//p.quit()
-
-	log.Printf("User %v left.", p.conn)
-}

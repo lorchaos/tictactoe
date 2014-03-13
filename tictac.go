@@ -2,13 +2,19 @@ package main
 
 import (
 	"github.com/lorchaos/tictactoe/server"
+	"github.com/lorchaos/tictactoe/game"
+	"log"
 )
 
 func main() {
 
-	server := server.NewServer()
-	server.Start()
-	
-	
+	s := server.NewServer()
+	c := s.Start()
 
+	for m := range server.MatchBuilder(c) {
+
+		go m.Run(game.Start)
+
+		log.Printf("Match started: %d", m.Id)
+	}
 }
